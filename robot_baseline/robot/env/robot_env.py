@@ -48,7 +48,6 @@ class Op3Env(gym.Env):
         # 初始化所有東西
         self.OP3 = None
         self.sphere = None
-        self.box = None
         self.done = False
         self.get_point = False
         np_resource = np.dtype([("resource", np.ubyte, 1)])
@@ -101,7 +100,6 @@ class Op3Env(gym.Env):
         p.resetSimulation(self.client)
         p.setGravity(0, 0, -9.8)
         self.OP3 = OP3(self.client)
-        self.box = box(self.client)
         Plane(self.client)
         self.sphere = sphere(self.client)
         self.done = False

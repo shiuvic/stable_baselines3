@@ -44,7 +44,7 @@ class OP3:
         self.client = client
         # f_name = os.path.join(os.path.dirname(__file__), 'robotis_op3.urdf')
         f_name = os.path.join(os.path.dirname(__file__), 'testurdf.urdf')
-        self.robot = p.loadURDF(fileName=f_name,basePosition=[0, 0, 0.3],physicsClientId=client)
+        self.robot = p.loadURDF(fileName=f_name,basePosition=[-2, 0, 0.3],physicsClientId=client)
         self.arm = dict()
         self.numJoints = p.getNumJoints(self.robot)
         self.joints = op3_joints
@@ -129,48 +129,48 @@ class OP3:
                 continue
             p.setJointMotorControl(self.robot, op3_joints.index(j), p.POSITION_CONTROL, v, 100)
 
-    def update_camera_th(self):
-        def _setCameraPicAndGetPic():
-            while True:
-                width = 224
-                height = 224
-                BASE_RADIUS = 3
-                BASE_THICKNESS = 3
-                # basePos = p.getLinkState(self.robot, 19)[0]
-                basePos,baseOrientation = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
-
-                matrix = p.getMatrixFromQuaternion(baseOrientation, physicsClientId=self.client)
-                tx_vec = np.array([matrix[0], matrix[3], matrix[6]])  # 变换后的x轴
-                tz_vec = np.array([matrix[2], matrix[5], matrix[8]])  # 变换后的z轴
-
-                basePos = np.array(basePos)
-                # 摄像头的位置
-                cameraPos = basePos + BASE_RADIUS * tx_vec + 0.5 * BASE_THICKNESS * tz_vec
-                targetPos = cameraPos + 1 * tx_vec
-
-                viewMatrix = p.computeViewMatrix(
-                    cameraEyePosition=cameraPos,
-                    cameraTargetPosition=targetPos,
-                    cameraUpVector=tz_vec,
-                    physicsClientId=self.client
-                )
-                projectionMatrix = p.computeProjectionMatrixFOV(
-                    fov=50.0,  # 摄像头的视线夹角
-                    aspect=1.0,
-                    nearVal=0.01,  # 摄像头焦距下限
-                    farVal=20,  # 摄像头能看上限
-                    physicsClientId=self.client
-                )
-
-                width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-                    width=width, height=height,
-                    viewMatrix=viewMatrix,
-                    projectionMatrix=projectionMatrix,
-                    renderer=p.ER_BULLET_HARDWARE_OPENGL,
-                    physicsClientId=self.client
-                )
-                return width, height, rgbImg, depthImg, segImg
-        Thread(target=_setCameraPicAndGetPic).start()
+    # def update_camera_th(self):
+    #     def _setCameraPicAndGetPic():
+    #         while True:
+    #             width = 224
+    #             height = 224
+    #             BASE_RADIUS = 3
+    #             BASE_THICKNESS = 3
+    #             # basePos = p.getLinkState(self.robot, 19)[0]
+    #             basePos,baseOrientation = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
+    #
+    #             matrix = p.getMatrixFromQuaternion(baseOrientation, physicsClientId=self.client)
+    #             tx_vec = np.array([matrix[0], matrix[3], matrix[6]])  # 变换后的x轴
+    #             tz_vec = np.array([matrix[2], matrix[5], matrix[8]])  # 变换后的z轴
+    #
+    #             basePos = np.array(basePos)
+    #             # 摄像头的位置
+    #             cameraPos = basePos + BASE_RADIUS * tx_vec + 0.5 * BASE_THICKNESS * tz_vec
+    #             targetPos = cameraPos + 1 * tx_vec
+    #
+    #             viewMatrix = p.computeViewMatrix(
+    #                 cameraEyePosition=cameraPos,
+    #                 cameraTargetPosition=targetPos,
+    #                 cameraUpVector=tz_vec,
+    #                 physicsClientId=self.client
+    #             )
+    #             projectionMatrix = p.computeProjectionMatrixFOV(
+    #                 fov=50.0,  # 摄像头的视线夹角
+    #                 aspect=1.0,
+    #                 nearVal=0.01,  # 摄像头焦距下限
+    #                 farVal=20,  # 摄像头能看上限
+    #                 physicsClientId=self.client
+    #             )
+    #
+    #             width, height, rgbImg, depthImg, segImg = p.getCameraImage(
+    #                 width=width, height=height,
+    #                 viewMatrix=viewMatrix,
+    #                 projectionMatrix=projectionMatrix,
+    #                 renderer=p.ER_BULLET_HARDWARE_OPENGL,
+    #                 physicsClientId=self.client
+    #             )
+    #             return width, height, rgbImg, depthImg, segImg
+    #     Thread(target=_setCameraPicAndGetPic).start()
 
     def setCameraPicAndGetPic(self):
         width = 50
@@ -187,7 +187,7 @@ class OP3:
         basePos = np.array(basePos)
         # 摄像头的位置
         cameraPos = basePos + BASE_RADIUS * tx_vec + 0.5 * BASE_THICKNESS * tz_vec
-        targetPos = cameraPos + 1 * tx_vec
+        targetPos = cameraPos + 1 * tx_vec - np.array([0,0,0.5])
 
         viewMatrix = p.computeViewMatrix(
             cameraEyePosition=cameraPos,
@@ -196,7 +196,7 @@ class OP3:
             physicsClientId=self.client
         )
         projectionMatrix = p.computeProjectionMatrixFOV(
-            fov=50.0,  # 摄像头的视线夹角
+            fov=60.0,  # 摄像头的视线夹角
             aspect=1.0,
             nearVal=0.01,  # 摄像头焦距下限
             farVal=20,  # 摄像头能看上限
