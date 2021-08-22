@@ -5,6 +5,7 @@ import pybullet as p
 import os
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 
 op3_joints = ['l_hip_yaw',
               'l_hip_roll',
@@ -96,6 +97,50 @@ class OP3:
         # pos , _ = p.getBasePositionAndOrientation(self.robot,self.client)
         observation = pos
         return observation
+    def get_observation_pic(self):
+        width = 50
+        height = 50
+        BASE_RADIUS = 0.2
+        BASE_THICKNESS = 0
+        basePos = p.getLinkState(self.robot, 19)[0]
+        _, baseOrientation = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
+
+        matrix = p.getMatrixFromQuaternion(baseOrientation, physicsClientId=self.client)
+        tx_vec = np.array([matrix[0], matrix[3], matrix[6]])  # 变换后的x轴
+        tz_vec = np.array([matrix[2], matrix[5], matrix[8]])  # 变换后的z轴
+
+        basePos = np.array(basePos)
+        # 摄像头的位置
+        # 摄像头的位置
+        cameraPos = basePos + BASE_RADIUS * tx_vec + 0.5 * BASE_THICKNESS * tz_vec
+        targetPos = cameraPos + 1 * tx_vec - np.array([0, 0, 0.5])
+
+        viewMatrix = p.computeViewMatrix(
+            cameraEyePosition=cameraPos,
+            cameraTargetPosition=targetPos,
+            cameraUpVector=tz_vec,
+            physicsClientId=self.client
+        )
+        projectionMatrix = p.computeProjectionMatrixFOV(
+            fov=60.0,  # 摄像头的视线夹角
+            aspect=1.0,
+            nearVal=0.01,  # 摄像头焦距下限
+            farVal=20,  # 摄像头能看上限
+            physicsClientId=self.client
+        )
+
+        img_arr = p.getCameraImage(
+            width=width, height=height,
+            viewMatrix=viewMatrix,
+            projectionMatrix=projectionMatrix,
+            shadow=0,
+            renderer=p.ER_BULLET_HARDWARE_OPENGL,
+            flags=p.ER_NO_SEGMENTATION_MASK,
+            physicsClientId=self.client
+        )
+        rgb = img_arr[2]
+        np_img_arr = np.reshape(rgb, (width, width, 4))
+        return np_img_arr[:, :, :3]
 
     def set_angles(self, angles):
         for j, v in angles.items():
@@ -172,47 +217,6 @@ class OP3:
     #             return width, height, rgbImg, depthImg, segImg
     #     Thread(target=_setCameraPicAndGetPic).start()
 
-    def setCameraPicAndGetPic(self):
-        width = 50
-        height = 50
-        BASE_RADIUS = 0.2
-        BASE_THICKNESS = 0
-        # basePos = p.getLinkState(self.robot,21)[0]
-        basePos, baseOrientation = p.getBasePositionAndOrientation(self.robot, physicsClientId=self.client)
-
-        matrix = p.getMatrixFromQuaternion(baseOrientation, physicsClientId=self.client)
-        tx_vec = np.array([matrix[0], matrix[3], matrix[6]])  # 变换后的x轴
-        tz_vec = np.array([matrix[2], matrix[5], matrix[8]])  # 变换后的z轴
-
-        basePos = np.array(basePos)
-        # 摄像头的位置
-        cameraPos = basePos + BASE_RADIUS * tx_vec + 0.5 * BASE_THICKNESS * tz_vec
-        targetPos = cameraPos + 1 * tx_vec - np.array([0,0,0.5])
-
-        viewMatrix = p.computeViewMatrix(
-            cameraEyePosition=cameraPos,
-            cameraTargetPosition=targetPos,
-            cameraUpVector=tz_vec,
-            physicsClientId=self.client
-        )
-        projectionMatrix = p.computeProjectionMatrixFOV(
-            fov=60.0,  # 摄像头的视线夹角
-            aspect=1.0,
-            nearVal=0.01,  # 摄像头焦距下限
-            farVal=20,  # 摄像头能看上限
-            physicsClientId=self.client
-        )
-
-        width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-            width=width, height=height,
-            viewMatrix=viewMatrix,
-            projectionMatrix=projectionMatrix,
-            renderer=p.ER_BULLET_HARDWARE_OPENGL,
-            physicsClientId=self.client
-        )
-
-        return width, height, rgbImg, depthImg, segImg
-
 def interpolate(anglesa, anglesb, coefa):
     z = {}
     joints = anglesa.keys()
@@ -220,18 +224,3 @@ def interpolate(anglesa, anglesb, coefa):
         z[j] = anglesa[j] * coefa + anglesb[j] * (1 - coefa)
     return z
 
-
-    # def _set_joint(self):
-    #     for joint in range(self.numJoints):
-    #         print(p.getJointInfo(self.robot, joint))
-    #         p.setJointMotorControl(self.robot, joint, p.POSITION_CONTROL, self.targetVel, self.maxForce)
-    #
-    # def run(self):
-    #     try:
-    #         while True:
-    #             p.stepSimulation()
-    #             time.sleep(1./240.)
-    #     finally:
-    #         OP3Pos, OP3Orn = p.getBasePositionAndOrientation(self.robot)
-    #         print(OP3Pos, OP3Orn)
-    #         p.disconnect()
