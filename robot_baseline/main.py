@@ -1,10 +1,4 @@
 import gym
-# from stable_baselines3.common.env_util import make_vec_env
-# from stable_baselines3 import PPO
-# from stable_baselines.common.callbacks import CheckpointCallback
-# multiprocess environment
-# checkpoint_callback = CheckpointCallback(save_freq=100000, save_path='./logs/',
-#                                          name_prefix='rl_model')
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
