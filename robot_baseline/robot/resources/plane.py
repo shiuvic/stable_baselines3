@@ -16,7 +16,6 @@ class Plane:
         self.red_goal = p.loadURDF(fileName=red_goal, basePosition=[1.35, 1, 3.21], physicsClientId=client)
 
 
-
     def pos_return(self,num):
         if num == 1:
             return (p.getBasePositionAndOrientation(self.goal)[0])

@@ -80,7 +80,6 @@ class Op3Env(gym.Env):
         self.done = False
         OP3_ob = self.OP3.get_observation()
         self.state = self.OP3.get_state()
-
         return np.array(OP3_ob, dtype=np.float32)
 
     def render(self, mode='human'):
