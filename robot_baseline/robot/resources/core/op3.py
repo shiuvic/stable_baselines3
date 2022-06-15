@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import pybullet as p
 import pybullet_data
 import sys
+import math
+import cv2
 
 if sys.platform == "win32":
     from ctypes import windll
@@ -36,19 +38,19 @@ op3_joints = ['l_hip_yaw',
 
 
 class OP3:
-    def __init__(self,client,fallen_reset=False, sim_speed=1.0):
+    def __init__(self,client,fallen_reset=True):
         self.fallen_reset = fallen_reset
         self.physicsClient = client  # or p.DIRECT for non-graphical version
         p.configureDebugVisualizer(p.COV_ENABLE_GUI)
-        self.sld_sim_speed = p.addUserDebugParameter("sim_speed", 1.0, 1000.0, sim_speed)
+        # self.sld_sim_speed = p.addUserDebugParameter("sim_speed", 1.0, 1000.0, sim_speed)
+        self.sld_sim_speed = 1.0
         self.bt_rst = p.addUserDebugParameter("reset OP3", 1, 0, 1)
-        # p.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
-        # p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
-        # p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
-
+        p.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 1)
+        p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 1)
+        p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 1)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())  # optionally
         p.setGravity(0, 0, -9.8)
-        self.op3StartPos = [-2, 0, 0.2]
+        self.op3StartPos = [-0.0, 0, 3.53]
         self.op3StartOrientation = p.getQuaternionFromEuler([0, 0, 0])
         # self.planeId = p.loadURDF("H:/stable_baseline/robot_baseline/robot/resources/simpleplane.urdf", basePosition=[0, 0, -0.2])
         # # self.planeId = p.loadURDF("plane.urdf")
@@ -57,10 +59,16 @@ class OP3:
         # self.red_1 = p.loadURDF("../red_.urdf", [1.5, -0.8, -0.2])
         # self.red_2 = p.loadURDF("../red_.urdf", [2.5, -0.2, -0.2])
         # self.red_3 = p.loadURDF("../red_.urdf", [0.4, 0.2, -0.2])
+        # filename = os.path.join(pybullet_data.getDataPath(), "plane_stadium.sdf")
+        # self.ground_plane_mjcf = self._p.loadSDF(filename)
         self.numJoints = p.getNumJoints(self.robot)
         self.targetVel = 0
         self.maxForce = 100
-
+        self.img = None
+        self.r = [0, 0, 0]
+        self.b = [0, 0, 0]
+        self.black = [0, 0, 0]
+        self.w = [0, 0, 0]
         # self.camera_follow()
         self.angles = None
         self.update_angle_th()
@@ -75,7 +83,7 @@ class OP3:
 
     @property
     def sim_speed(self):
-        return p.readUserDebugParameter(self.sld_sim_speed)
+        return 1.0
 
     def get_orientation(self):
         _, orientation = p.getBasePositionAndOrientation(self.robot)
@@ -213,14 +221,79 @@ class OP3:
                     renderer=p.ER_BULLET_HARDWARE_OPENGL,
                     # physicsClientId=self.physicsClient
                 )
-                time.sleep(0.1)
+                time.sleep(0.15)
                 self.img = rgbImg
         Thread(target=setCameraPicAndGetPic).start()
+
+
+    def angle(self,goal):
+        X = np.array(goal) - np.array(self.get_position())
+        U = math.atan2(X[1], X[0])
+        # U = U*(180/math.pi)
+        OR = p.getEulerFromQuaternion(self.get_orientation())[2]
+
+        y = U - OR
+        return y
+
 
     def get_observation(self):
         img_arr = self.img
         np_img_arr = np.reshape(img_arr, (50, 50, 4))
-        return np_img_arr[:, :, :4]
+        x = p.getBasePositionAndOrientation(self.robot)[0][0]
+        y = p.getBasePositionAndOrientation(self.robot)[0][1]
+        ob = np.append(np_img_arr[:, :, :4].flatten(), np.full((50, 2), [x, y]).flatten())
+        return ob
+
+    def img_pro(self, arr):
+        r_x = []
+        r_y = []
+        b_x = []
+        b_y = []
+        w_x = []
+        w_y = []
+        black_x = []
+        black_y = []
+        self.r = [0, 0, 0]
+        self.b = [0, 0, 0]
+        self.black = [0, 0, 0]
+        self.w = [0, 0, 0]
+        for i in range(50):
+            for j in range(50):
+                if arr.item(i, j, 0) > 100 and arr.item(i, j, 1) < 50 and arr.item(i, j, 2) < 50:
+                    r_x.append(i)
+                    r_y.append(j)
+                if arr.item(i, j, 0) < 50 and arr.item(i, j, 1) < 50 and arr.item(i, j, 2) > 100:
+                    b_x.append(i)
+                    b_y.append(j)
+                if arr.item(i, j, 0) > 250 and arr.item(i, j, 1) > 250 and arr.item(i, j, 2) > 250:
+                    w_x.append(i)
+                    w_y.append(j)
+                if arr.item(i, j, 0) < 10 and arr.item(i, j, 1) < 10 and arr.item(i, j, 2) < 10:
+                    black_x.append(i)
+                    black_y.append(j)
+
+
+        if r_x != [] and r_y != []:
+            x = round(np.mean(r_x))
+            y = round(np.mean(r_y))
+            self.r = [1, x, y]
+
+        if b_x != [] and b_y != []:
+            x = round(np.mean(b_x))
+            y = round(np.mean(b_y))
+            self.b = [1, x, y]
+
+        if black_x != [] and black_y != []:
+            x = round(np.mean(black_x))
+            y = round(np.mean(black_y))
+            self.black = [1, x, y]
+        if w_x != [] and w_y != []:
+            x = round(np.mean(w_x))
+            y = round(np.mean(w_y))
+            self.w = [1, x, y]
+
+
+
 
 def interpolate(anglesa, anglesb, coefa):
     z = {}
@@ -231,6 +304,5 @@ def interpolate(anglesa, anglesb, coefa):
 
 
 if __name__ == '__main__':
-    op3 = OP3()
     op3.run()
     pass

@@ -2,19 +2,27 @@
 import time
 from threading import Thread
 import pybullet as p
+import numpy as np
+import os
 from robot.resources.core.op3 import OP3
 from robot.resources.walking.wfunc import WFunc
-# from core.op3 import OP3
 # from walking.wfunc import WFunc
-
+# from core.op3 import OP3
 class Walker(OP3):
     """
     Class for making Darwin walk
     """
 
-    def __init__(self,client,x_vel=1, y_vel=0, ang_vel=0, interval=0.0054, *args, **kwargs):
+    def __init__(self,client,x_vel=1, y_vel=0, ang_vel=0, *args, **kwargs):
         OP3.__init__(self,client *args, **kwargs)
 
+        f_name = os.path.join(os.path.dirname(__file__), 'square.urdf')
+        goal = os.path.join(os.path.dirname(__file__), 'square_blue.urdf')
+        red_goal = os.path.join(os.path.dirname(__file__), 'square_red.urdf')
+        p.loadURDF(fileName=f_name, basePosition=[1.2, 0, 3.2], physicsClientId=client)
+
+        self.goal = p.loadURDF(fileName=goal, basePosition=[1.35, -1, 3.21], physicsClientId=client)
+        self.red_goal = p.loadURDF(fileName=red_goal, basePosition=[1.35, 1, 3.21], physicsClientId=client)
         self.running = False
 
         self.velocity = [0, 0, 0]
@@ -23,23 +31,27 @@ class Walker(OP3):
         self.x_vel = x_vel
         self.y_vel = y_vel
         self.ang_vel = ang_vel
-        self.sld_x_vel = p.addUserDebugParameter("x_vel", -10, 10, x_vel)
-        self.sld_y_vel = p.addUserDebugParameter("y_vel", -10, 10, y_vel)
-        self.sld_ang_vel = p.addUserDebugParameter("ang_vel", -10, 10, ang_vel)
+        # self.sld_x_vel = p.addUserDebugParameter("x_vel", -10, 10, x_vel)
+        # self.sld_y_vel = p.addUserDebugParameter("y_vel", -10, 10, y_vel)
+        # self.sld_ang_vel = p.addUserDebugParameter("ang_vel", -10, 10, ang_vel)
 
         self.wfunc = WFunc()
         # ~ self.ready_pos=get_walk_angles(10)
-        self.ready_pos = self.wfunc.get(True, 0, [0, 0, 0])
-        self.ready_pos.update({"r_sho_pitch": 0, "l_sho_pitch": 0,
-                               "r_sho_roll": -1.0, "l_sho_roll": 1.0,
-                               "r_el": 0.5, "l_el": -0.5,
-                               "head_tilt": -0.5})
-        self._th_walk = None
+        self.ready()
 
-        self.sld_interval = p.addUserDebugParameter("step_interval", 0.001, 0.01, interval)
+        self._th_walk = None
+        # self.sld_interval = p.addUserDebugParameter("step_interval", 0.001, 0.01, interval)
         # self.check_gui_th()
-        self.op3StartPos = [-2, 0, 0.3]
+        self.op3StartPos = [0.0, 0, 3.53]
         self.op3StartOrientation = [0,0,0,1]
+        self.data = None
+        self.angle_arr = []
+    def ready(self):
+            self.ready_pos = self.wfunc.get(True, 0, [0, 0, 0])
+            self.ready_pos.update({"r_sho_pitch": 0, "l_sho_pitch": 0,
+                                   "r_sho_roll": -1.0, "l_sho_roll": 1.0,
+                                   "r_el": 0.5, "l_el": -0.5,
+                                   "head_tilt": -0.5})
 
     def cmd_vel(self, vx, vy, vt):
         print("cmdvel", (vx, vy, vt))
@@ -69,6 +81,7 @@ class Walker(OP3):
             while self._th_walk is not None:
                 time.sleep(0.1)
             print("Stopped")
+            np.save('angles.npy', self.angle_arr)
             self.running = False
 
     def set_velocity(self, x, y, t):
@@ -99,23 +112,44 @@ class Walker(OP3):
         n = 60
         phrase = True
         i = 0
+        j = 0
         self.current_velocity = [0, 0, 0]
+        self.stop_count = 0
+
+        # if self.ang_vel < 0.4:
+        #     angle_new = np.load('left.npy', allow_pickle=True)
+        # else:
+        # angle_new = np.load('final_1.npy', allow_pickle=True)
         while self.walking or i < n or self.is_walking():
             if not self.walking:
                 self.velocity = [0, 0, 0]
             elif not self.is_walking() and i == 0:  # Do not move if nothing to do and already at 0
                 self.update_velocity(self.velocity, n)
-                time.sleep(1/480.)
+                time.sleep(1 / 480.)
                 continue
             x = float(i) / n
             angles = self.wfunc.get(phrase, x, self.current_velocity)
             self.update_velocity(self.velocity, n)
             self.set_angles(angles)
+            self.angle_arr.append(angles)
             i += 1
             if i > n:
                 i = 0
                 phrase = not phrase
-            time.sleep(1/480.)
+            time.sleep(1. / 240.)
+            # if self.walking:
+            #     angles = angle_new[j]
+            # self.set_angles(angles)
+            # i += 1
+            # j += 1
+            # if j > n * 2:
+            #     j = 0
+            # if i > n:
+            #     i = 0
+            #     phrase = not phrase
+            # time.sleep(1 / 480.)
+            # self.stop_count += 1
+
         self._th_walk = None
 
     def is_walking(self):
@@ -147,7 +181,7 @@ class Walker(OP3):
         self.stop()
         p.resetBasePositionAndOrientation(self.robot, self.op3StartPos, self.op3StartOrientation)
         self.start()
-        self.set_velocity(self.x_vel, self.y_vel, self.ang_vel)
+        self.set_velocity(self.x_vel, self.y_vel, 0)
 
     def apply_action(self, action):
         action = action * 0.5
@@ -181,7 +215,6 @@ if __name__ == '__main__':
     walker = Walker(wewe)
     time.sleep(1)
     walker.reset()
-    walker.get_observation()
     while True:
         time.sleep(0.1)
 
