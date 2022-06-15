@@ -8,8 +8,6 @@ from robot.resources.plane import Plane
 from robot.resources.walker import Walker
 from gym.utils import seeding
 from robot.resources.savereward import save
-import math
-import time
 
 class Op3Env(gym.Env):
     metadata = {'render.modes': ['human']}
