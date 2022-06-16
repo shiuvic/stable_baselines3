@@ -52,15 +52,7 @@ class OP3:
         p.setGravity(0, 0, -9.8)
         self.op3StartPos = [-0.0, 0, 3.53]
         self.op3StartOrientation = p.getQuaternionFromEuler([0, 0, 0])
-        # self.planeId = p.loadURDF("H:/stable_baseline/robot_baseline/robot/resources/simpleplane.urdf", basePosition=[0, 0, -0.2])
-        # # self.planeId = p.loadURDF("plane.urdf")
-        self.robot = p.loadURDF("H:/stable_baseline/robot_baseline/robot/resources/robotis_op3.urdf", self.op3StartPos, self.op3StartOrientation)
-        # self.goal = p.loadURDF(fileName="../goal.urdf", basePosition=[4, 0, -0.2])
-        # self.red_1 = p.loadURDF("../red_.urdf", [1.5, -0.8, -0.2])
-        # self.red_2 = p.loadURDF("../red_.urdf", [2.5, -0.2, -0.2])
-        # self.red_3 = p.loadURDF("../red_.urdf", [0.4, 0.2, -0.2])
-        # filename = os.path.join(pybullet_data.getDataPath(), "plane_stadium.sdf")
-        # self.ground_plane_mjcf = self._p.loadSDF(filename)
+        self.robot = p.loadURDF(".//robotis_op3.urdf", self.op3StartPos, self.op3StartOrientation)
         self.numJoints = p.getNumJoints(self.robot)
         self.targetVel = 0
         self.maxForce = 100

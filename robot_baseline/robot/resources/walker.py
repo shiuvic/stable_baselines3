@@ -31,16 +31,12 @@ class Walker(OP3):
         self.x_vel = x_vel
         self.y_vel = y_vel
         self.ang_vel = ang_vel
-        # self.sld_x_vel = p.addUserDebugParameter("x_vel", -10, 10, x_vel)
-        # self.sld_y_vel = p.addUserDebugParameter("y_vel", -10, 10, y_vel)
-        # self.sld_ang_vel = p.addUserDebugParameter("ang_vel", -10, 10, ang_vel)
 
         self.wfunc = WFunc()
         # ~ self.ready_pos=get_walk_angles(10)
         self.ready()
 
         self._th_walk = None
-        # self.sld_interval = p.addUserDebugParameter("step_interval", 0.001, 0.01, interval)
         # self.check_gui_th()
         self.op3StartPos = [0.0, 0, 3.53]
         self.op3StartOrientation = [0,0,0,1]
@@ -116,10 +112,6 @@ class Walker(OP3):
         self.current_velocity = [0, 0, 0]
         self.stop_count = 0
 
-        # if self.ang_vel < 0.4:
-        #     angle_new = np.load('left.npy', allow_pickle=True)
-        # else:
-        # angle_new = np.load('final_1.npy', allow_pickle=True)
         while self.walking or i < n or self.is_walking():
             if not self.walking:
                 self.velocity = [0, 0, 0]
@@ -137,18 +129,6 @@ class Walker(OP3):
                 i = 0
                 phrase = not phrase
             time.sleep(1. / 240.)
-            # if self.walking:
-            #     angles = angle_new[j]
-            # self.set_angles(angles)
-            # i += 1
-            # j += 1
-            # if j > n * 2:
-            #     j = 0
-            # if i > n:
-            #     i = 0
-            #     phrase = not phrase
-            # time.sleep(1 / 480.)
-            # self.stop_count += 1
 
         self._th_walk = None
 
